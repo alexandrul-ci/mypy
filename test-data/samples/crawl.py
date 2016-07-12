@@ -654,8 +654,7 @@ class Crawler:
         self.pool = ConnectionPool(self.log, max_pool, max_tasks)
         self.root_domains = set()  # type: Set[str]
         for root in roots:
-            parsed = urllib.parse.urlparse(root)
-            host, port = urllib.parse.splitport(parsed.netloc)  # type: (str, str)
+            host = urllib.parse.urlparse(root).hostname
             if not host:
                 continue
             if re.match(r'\A[\d\.]*\Z', host):
@@ -732,7 +731,7 @@ class Crawler:
         if parsed.scheme not in ('http', 'https'):
             self.log(2, 'skipping non-http scheme in', url)
             return False
-        host, port = urllib.parse.splitport(parsed.netloc)  # type: (str, str)
+        host = parsed.hostname
         if not self.host_okay(host):
             self.log(2, 'skipping non-root host in', url)
             return False
