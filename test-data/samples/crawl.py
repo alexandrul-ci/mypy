@@ -16,7 +16,7 @@ import re
 import sys
 import time
 import urllib.parse
-from typing import Any, IO, Iterable, Iterator, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Generator, IO, Optional, Sequence, Set, Tuple
 
 
 ARGS = argparse.ArgumentParser(description="Web crawler")
@@ -132,7 +132,7 @@ class ConnectionPool:
         self.queue.clear()
 
     @asyncio.coroutine
-    def get_connection(self, host: str, port: int, ssl: bool) -> Iterator['Connection']:
+    def get_connection(self, host: str, port: int, ssl: bool) -> Generator[Any, None, 'Connection']:
         """Create or reuse a connection."""
         port = port or (443 if ssl else 80)
         try:
@@ -253,7 +253,7 @@ class Connection:
         return None
 
     @asyncio.coroutine
-    def connect(self) -> Iterator[None]:
+    def connect(self) -> Generator[Any, None, None]:
         self.reader, self.writer = yield from asyncio.open_connection(
             self.host, self.port, ssl=self.ssl)
         peername = self.writer.get_extra_info('peername')
@@ -301,7 +301,7 @@ class Request:
         self.conn = None  # type: Connection
 
     @asyncio.coroutine
-    def connect(self) -> Iterator[None]:
+    def connect(self) -> Generator[Any, None, None]:
         """Open a connection to the server."""
         self.log(1, '* Connecting to %s:%s using %s for %s' %
                     (self.hostname, self.port,
@@ -319,7 +319,7 @@ class Request:
             self.conn = None
 
     @asyncio.coroutine
-    def putline(self, line: str) -> Iterator[None]:
+    def putline(self, line: str) -> Generator[Any, None, None]:
         """Write a line to the connection.
 
         Used for the request line and headers.
@@ -328,7 +328,7 @@ class Request:
         self.conn.writer.write(line.encode('latin-1') + b'\r\n')
 
     @asyncio.coroutine
-    def send_request(self) -> Iterator[None]:
+    def send_request(self) -> Generator[Any, None, None]:
         """Send the request."""
         request_line = '%s %s %s' % (self.method, self.full_path,
                                      self.http_version)
@@ -344,7 +344,7 @@ class Request:
         yield from self.putline('')
 
     @asyncio.coroutine
-    def get_response(self) -> Iterator['Response']:
+    def get_response(self) -> Generator[Any, None, 'Response']:
         """Receive the response."""
         response = Response(self.log, self.conn.reader)
         yield from response.read_headers()
@@ -368,14 +368,14 @@ class Response:
         self.headers = []  # type: List[Tuple[str, str]]  # [('Content-Type', 'text/html')]
 
     @asyncio.coroutine
-    def getline(self) -> Iterator[str]:
+    def getline(self) -> Generator[Any, None, str]:
         """Read one line from the connection."""
         line = (yield from self.reader.readline()).decode('latin-1').rstrip()
         self.log(2, '<', line)
         return line
 
     @asyncio.coroutine
-    def read_headers(self) -> Iterator[None]:
+    def read_headers(self) -> Generator[Any, None, None]:
         """Read the response status and the request headers."""
         status_line = yield from self.getline()
         status_parts = status_line.split(None, 2)
@@ -407,7 +407,7 @@ class Response:
         return default
 
     @asyncio.coroutine
-    def read(self) -> Iterator[bytes]:
+    def read(self) -> Generator[Any, None, bytes]:
         """Read the response body.
 
         This honors Content-Length and Transfer-Encoding: chunked.
@@ -490,7 +490,7 @@ class Fetcher:
         self.new_urls = None  # type: Set[str]
 
     @asyncio.coroutine
-    def fetch(self) -> Iterator[None]:
+    def fetch(self) -> Generator[Any, None, None]:
         """Attempt to fetch the contents of the URL.
 
         If successful, and the data is HTML, extract further links and
@@ -744,7 +744,7 @@ class Crawler:
         return True
 
     @asyncio.coroutine
-    def crawl(self) -> Iterator[None]:
+    def crawl(self) -> Generator[Any, None, None]:
         """Run the crawler until all finished."""
         with (yield from self.termination):
             while self.todo or self.busy:
@@ -762,7 +762,7 @@ class Crawler:
         self.t1 = time.time()
 
     @asyncio.coroutine
-    def fetch(self, fetcher: Fetcher) -> Iterator[None]:
+    def fetch(self, fetcher: Fetcher) -> Generator[Any, None, None]:
         """Call the Fetcher's fetch(), with a limit on concurrency.
 
         Once this returns, move the fetcher from busy to done.
