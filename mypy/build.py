@@ -38,6 +38,7 @@ from mypy.parse import parse
 from mypy.stats import dump_type_stats
 from mypy.types import Type
 from mypy.version import __version__
+from mypy_res import MYPY_DATA_DIR
 
 
 # We need to know the location of this file to load data, but
@@ -105,8 +106,7 @@ class BuildSourceSet:
 
 def build(sources: List[BuildSource],
           options: Options,
-          alt_lib_path: str = None,
-          bin_dir: str = None) -> BuildResult:
+          alt_lib_path: str = None) -> BuildResult:
     """Analyze a program.
 
     A single call to build performs parsing, semantic analysis and optionally
@@ -120,11 +120,9 @@ def build(sources: List[BuildSource],
       options: build options
       alt_lib_path: an additional directory for looking up library modules
         (takes precedence over other directories)
-      bin_dir: directory containing the mypy script, used for finding data
-        directories; if omitted, use '.' as the data directory
     """
 
-    data_dir = default_data_dir(bin_dir)
+    data_dir = MYPY_DATA_DIR
 
     find_module_clear_caches()
 
@@ -190,58 +188,6 @@ def build(sources: List[BuildSource],
                      manager.errors.num_messages()))
         # Finish the HTML or XML reports even if CompileError was raised.
         reports.finish()
-
-
-def default_data_dir(bin_dir: Optional[str]) -> str:
-    """Returns directory containing typeshed directory
-
-    Args:
-      bin_dir: directory containing the mypy script
-    """
-    if not bin_dir:
-        mypy_package = os.path.dirname(__file__)
-        parent = os.path.dirname(mypy_package)
-        if (os.path.basename(parent) == 'site-packages' or
-                os.path.basename(parent) == 'dist-packages'):
-            # Installed in site-packages or dist-packages, but invoked with python3 -m mypy;
-            # __file__ is .../blah/lib/python3.N/site-packages/mypy/build.py
-            # or .../blah/lib/python3.N/dist-packages/mypy/build.py (Debian)
-            # or .../blah/lib/site-packages/mypy/build.py (Windows)
-            # blah may be a virtualenv or /usr/local.  We want .../blah/lib/mypy.
-            lib = parent
-            for i in range(2):
-                lib = os.path.dirname(lib)
-                if os.path.basename(lib) == 'lib':
-                    return os.path.join(lib, 'mypy')
-        subdir = os.path.join(parent, 'lib', 'mypy')
-        if os.path.isdir(subdir):
-            # If installed via buildout, the __file__ is
-            # somewhere/mypy/__init__.py and what we want is
-            # somewhere/lib/mypy.
-            return subdir
-        # Default to directory containing this file's parent.
-        return parent
-    base = os.path.basename(bin_dir)
-    dir = os.path.dirname(bin_dir)
-    if (sys.platform == 'win32' and base.lower() == 'scripts'
-            and not os.path.isdir(os.path.join(dir, 'typeshed'))):
-        # Installed, on Windows.
-        return os.path.join(dir, 'Lib', 'mypy')
-    elif base == 'scripts':
-        # Assume that we have a repo check out or unpacked source tarball.
-        return dir
-    elif base == 'bin':
-        # Installed to somewhere (can be under /usr/local or anywhere).
-        return os.path.join(dir, 'lib', 'mypy')
-    elif base == 'python3':
-        # Assume we installed python3 with brew on os x
-        return os.path.join(os.path.dirname(dir), 'lib', 'mypy')
-    elif dir.endswith('python-exec'):
-        # Gentoo uses a python wrapper in /usr/lib to which mypy is a symlink.
-        return os.path.join(os.path.dirname(dir), 'mypy')
-    else:
-        # Don't know where to find the data files!
-        raise RuntimeError("Broken installation: can't determine base dir")
 
 
 def mypy_path() -> List[str]:

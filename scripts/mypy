@@ -3,4 +3,4 @@
 
 from mypy.main import main
 
-main(__file__)
+main()

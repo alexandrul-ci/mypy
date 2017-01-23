@@ -25,21 +25,17 @@ from mypy.version import __version__
 PY_EXTENSIONS = tuple(PYTHON_EXTENSIONS)
 
 
-def main(script_path: str) -> None:
+def main() -> None:
     """Main entry point to the type checker.
 
     Args:
         script_path: Path to the 'mypy' script (used for finding data files).
     """
     t0 = time.time()
-    if script_path:
-        bin_dir = find_bin_directory(script_path)
-    else:
-        bin_dir = None
     sources, options = process_options(sys.argv[1:])
     serious = False
     try:
-        res = type_check_only(sources, bin_dir, options)
+        res = type_check_only(sources, options)
         a = res.errors
     except CompileError as e:
         a = e.messages
@@ -55,20 +51,6 @@ def main(script_path: str) -> None:
         sys.exit(1)
 
 
-def find_bin_directory(script_path: str) -> str:
-    """Find the directory that contains this script.
-
-    This is used by build to find stubs and other data files.
-    """
-    # Follow up to 5 symbolic links (cap to avoid cycles).
-    for i in range(5):
-        if os.path.islink(script_path):
-            script_path = readlinkabs(script_path)
-        else:
-            break
-    return os.path.dirname(script_path)
-
-
 def readlinkabs(link: str) -> str:
     """Return an absolute path to symbolic link destination."""
     # Adapted from code by Greg Smith.
@@ -80,10 +62,9 @@ def readlinkabs(link: str) -> str:
 
 
 def type_check_only(sources: List[BuildSource],
-        bin_dir: str, options: Options) -> BuildResult:
+        options: Options) -> BuildResult:
     # Type-check the program and dependencies and translate to Python.
     return build.build(sources=sources,
-                       bin_dir=bin_dir,
                        options=options)
 
 

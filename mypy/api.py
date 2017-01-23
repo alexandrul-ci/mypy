@@ -46,7 +46,7 @@ def run(params: str) -> Tuple[str, str]:
     sys.stderr = new_stderr
 
     try:
-        main(None)
+        main()
     except SystemExit:
         pass
 

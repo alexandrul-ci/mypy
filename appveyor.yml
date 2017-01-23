@@ -4,25 +4,25 @@ environment:
     - PYTHON: "C:\\Python35"
       PYTHON_VERSION: "3.5.1"
       PYTHON_ARCH: "32"
-      
+
     - PYTHON: "C:\\Python35-x64"
       PYTHON_VERSION: "3.5.1"
       PYTHON_ARCH: "64"
-    
+
     - PYTHON: "C:\\Python36"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "32"
-      
+
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
-     
-     
+
+
 install:
     - "%PYTHON%\\python.exe -m pip install -r test-requirements.txt"
-    - "git submodule update --init typeshed"
+    - "git submodule update --init --recursive"
     - "%PYTHON%\\python.exe setup.py -q install"
-   
+
 build: off
 
 test_script:

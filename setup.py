@@ -34,15 +34,16 @@ types.
 '''.lstrip()
 
 
-def find_data_files(base, globs):
-    """Find all interesting data files, for setup(data_files=)
+def find_package_data_files(package_name, base, globs):
+    """Find all interesting package data files, for setup(package_data=)
 
     Arguments:
-      root:  The directory to search in.
+      package_name: The package name.
+      base:  The directory to search in.
       globs: A list of glob patterns to accept files.
     """
 
-    rv_dirs = [root for root, dirs, files in os.walk(base)]
+    rv_dirs = [root for root, dirs, files in os.walk(os.path.join(package_name, base))]
     rv = []
     for rv_dir in rv_dirs:
         files = []
@@ -50,8 +51,7 @@ def find_data_files(base, globs):
             files += glob.glob(os.path.join(rv_dir, pat))
         if not files:
             continue
-        target = os.path.join('lib', 'mypy', rv_dir)
-        rv.append((target, files))
+        rv.extend([os.path.relpath(x, package_name) for x in files])
 
     return rv
 
@@ -68,11 +68,11 @@ class CustomPythonBuild(build_py):
         build_py.run(self)
 
 
-data_files = []
+mypy_res_files = []
 
-data_files += find_data_files('typeshed', ['*.py', '*.pyi'])
+mypy_res_files += find_package_data_files('mypy_res', 'typeshed', ['*.py', '*.pyi'])
 
-data_files += find_data_files('xml', ['*.xsd', '*.xslt', '*.css'])
+mypy_res_files += find_package_data_files('mypy_res', 'xml', ['*.xsd', '*.xslt', '*.css'])
 
 classifiers = [
     'Development Status :: 2 - Pre-Alpha',
@@ -89,11 +89,7 @@ classifiers = [
 ]
 
 
-package_dir = {'mypy': 'mypy'}
-
-scripts = ['scripts/mypy', 'scripts/stubgen']
-if os.name == 'nt':
-    scripts.append('scripts/mypy.bat')
+scripts = ['scripts/stubgen']
 
 # These requirements are used when installing by other means than bdist_wheel.
 # E.g. "pip3 install ." or
@@ -113,12 +109,18 @@ setup(name='mypy',
       url='http://www.mypy-lang.org/',
       license='MIT License',
       platforms=['POSIX'],
-      package_dir=package_dir,
       py_modules=[],
-      packages=['mypy'],
+      packages=['mypy', 'mypy_res'],
+      package_data={
+          'mypy_res': mypy_res_files,
+      },
       scripts=scripts,
-      data_files=data_files,
       classifiers=classifiers,
       cmdclass={'build_py': CustomPythonBuild},
       install_requires=install_requires,
+      entry_points={
+          'console_scripts': [
+              'mypy=mypy.main:main',
+          ],
+      },
       )
